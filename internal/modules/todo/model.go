@@ -3,11 +3,11 @@ package todo
 import "time"
 
 type Todo struct {
-	ID 						string
-	UserID 				string
-	Title 				string
-	Description 	string
-	Completed 	  bool
-	CreatedAt 		time.Time
-	UpdatedAt 		time.Time
+	ID 						 int64
+	UserID 				 int64
+	Title 				 string
+	Description 	 *string
+	Completed 		 bool
+	CreatedAt 		 time.Time
+	UpdatedAt 		 time.Time
 }

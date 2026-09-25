@@ -7,6 +7,8 @@ import (
 	"github.com/modasser-nayem/tiny-task/internal/config"
 	"github.com/modasser-nayem/tiny-task/internal/database"
 	"github.com/modasser-nayem/tiny-task/internal/modules/auth"
+	"github.com/modasser-nayem/tiny-task/internal/modules/todo"
+	"github.com/modasser-nayem/tiny-task/internal/modules/user"
 	"github.com/modasser-nayem/tiny-task/internal/router"
 )
 
@@ -32,7 +34,19 @@ func main() {
 
 		authHandler := auth.NewHandler(authService)
 
-		r := router.Setup(cfg, authHandler)
+		userHandler := user.NewHandler()
+
+		todoRepository := todo.NewPostgresRepository(db)
+		todoService := todo.NewService(todoRepository)
+		todoHandler := todo.NewHandler(todoService)
+
+		r := router.Setup(
+			cfg,
+			authHandler,
+			userHandler,
+			todoHandler,
+			tokenManager,
+		)
 
 		log.Println("Server running on", cfg.Port)
 
