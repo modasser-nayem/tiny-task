@@ -18,3 +18,9 @@ type TodoResponse struct {
 	Description *string `json:"description"`
 	Completed   bool    `json:"completed"`
 }
+
+type ListTodoQuery struct {
+	Page int
+	Limit int
+	Completed *bool
+}

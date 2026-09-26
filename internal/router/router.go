@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/modasser-nayem/tiny-task/internal/config"
+	"github.com/modasser-nayem/tiny-task/internal/middleware"
 	"github.com/modasser-nayem/tiny-task/internal/modules/auth"
 	"github.com/modasser-nayem/tiny-task/internal/modules/todo"
 	"github.com/modasser-nayem/tiny-task/internal/modules/user"
@@ -13,6 +14,8 @@ import (
 func Setup(cfg config.Config, authHandler *auth.Handler, userHandler *user.Handler, todoHandler *todo.Handler, tokenManager *auth.TokenManager) *gin.Engine {
   
 	r := gin.Default()
+
+	r.Use(middleware.ErrorHandler())
 
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{

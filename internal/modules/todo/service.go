@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"strings"
+
+	apperrors "github.com/modasser-nayem/tiny-task/internal/errors"
 )
 
 type Service struct {
@@ -36,8 +38,8 @@ func (s *Service) Create(ctx context.Context, userID int64, req CreateTodoReques
 	return toResponse(created), nil
 }
 
-func (s *Service) GetAll(ctx context.Context, userID int64 ) ([]TodoResponse, error) {
-	todos, err := s.repository.FindAllByUserID(ctx, userID)
+func (s *Service) GetAll(ctx context.Context, userID int64, query ListTodoQuery ) ([]TodoResponse, error) {
+	todos, err := s.repository.FindAllByUserID(ctx, userID, query)
 
 	if err != nil {
 		return nil, err
@@ -56,10 +58,66 @@ func (s *Service) GetByID(ctx context.Context, userID int64, id int64) (*TodoRes
 	todo, err := s.repository.FindByID(ctx, id, userID)
 
 	if err != nil {
+		if errors.Is(err, ErrTodoNotFound) {
+			return nil, apperrors.NotFound(
+				"TODO_NOT_FOUND",
+				"todo not found",
+			)
+		}
+
+		return nil, apperrors.Internal(
+			"TODO_FETCH_FAILED",
+			"failed to fetch todo",
+		)
+	}
+
+
+	return toResponse(todo), nil
+}
+
+func (s *Service) Update(ctx context.Context, userID int64, id int64, req UpdateTodoRequest) (*TodoResponse, error) {
+	todo, err := s.repository.FindByID(ctx, id, userID)
+
+	if err != nil {
 		return nil, err
 	}
 
-	return toResponse(todo), nil
+	if req.Title != nil {
+		title := strings.TrimSpace(*req.Title)
+		if title == "" {
+			return nil, errors.New("title cannot be empty")
+		}
+		todo.Title = title
+	}
+
+
+	if req.Description != nil {
+		todo.Description = req.Description
+	}
+
+	if req.Completed != nil {
+		todo.Completed = *req.Completed
+	}
+
+	updated, err := s.repository.Update(ctx, todo)
+  if err != nil {
+		return nil, err
+	}
+
+	return toResponse(updated), nil
+}
+
+func (s *Service) Delete(
+	ctx context.Context,
+	userID int64,
+	id int64,
+) error {
+
+	return s.repository.Delete(
+		ctx,
+		id,
+		userID,
+	)
 }
 
 func toResponse(todo *Todo) *TodoResponse {

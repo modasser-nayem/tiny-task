@@ -15,7 +15,7 @@ func RegisterRoutes(r *gin.RouterGroup, handler *Handler, tokenManager *auth.Tok
 	todoRoutes.POST("/", handler.Create)
 	todoRoutes.GET("/", handler.GetAll)
 	todoRoutes.GET("/:id", handler.GetByID)
-	// todoRoutes.PUT("/:id", handler.Update)
-	// todoRoutes.DELETE("/:id", handler.Delete)
+	todoRoutes.PUT("/:id", handler.Update)
+	todoRoutes.DELETE("/:id", handler.Delete)
 
 }

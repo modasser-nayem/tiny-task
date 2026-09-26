@@ -6,14 +6,15 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	apperrors "github.com/modasser-nayem/tiny-task/internal/errors"
 )
 
-var ErrTodoNotFound = errors.New("todo not found")
+var ErrTodoNotFound = apperrors.NotFound("TODO_NOT_FOUND", "todo not found")
 
 type Repository interface {
 	Create(ctx context.Context, todo *Todo) (*Todo, error)
 
-	FindAllByUserID(ctx context.Context, userID int64) ([]Todo, error)
+	FindAllByUserID(ctx context.Context, userID int64, queryParams ListTodoQuery) ([]Todo, error)
 
 	FindByID(ctx context.Context, id int64, userID int64) (*Todo, error)
 
@@ -39,21 +40,21 @@ func(r *PostgresRepository) Create(ctx context.Context, todo *Todo) (*Todo, erro
 	VALUES ($1, $2, $3, $4)
 	RETURNING id, user_id, title, description, completed, created_at, updated_at
 	`
-err := r.db.QueryRow(ctx, query, todo.UserID, todo.Title, todo.Description, todo.Completed).Scan(
-	&created.ID,
-	&created.UserID,
-	&created.Title,
-	&created.Description,
-	&created.Completed,
-	&created.CreatedAt,
-	&created.UpdatedAt,
-)
+	err := r.db.QueryRow(ctx, query, todo.UserID, todo.Title, todo.Description, todo.Completed).Scan(
+		&created.ID,
+		&created.UserID,
+		&created.Title,
+		&created.Description,
+		&created.Completed,
+		&created.CreatedAt,
+		&created.UpdatedAt,
+	)
 
-if err != nil {
-	return nil, err
-}
+	if err != nil {
+		return nil, err
+	}
 
-return &created, nil
+	return &created, nil
 
 }
 
@@ -88,16 +89,27 @@ func (r *PostgresRepository) FindByID(ctx context.Context, id int64, userID int6
 	return &todo, nil
 }
 
-func(r *PostgresRepository) FindAllByUserID(ctx context.Context, userID int64) ([]Todo, error) {
+func(r *PostgresRepository) FindAllByUserID(ctx context.Context, userID int64, queryParams ListTodoQuery) ([]Todo, error) {
+
+	offset := (queryParams.Page -1) * queryParams.Limit
 
 	query := `
 	SELECT id, user_id, title, description, completed, created_at, updated_at
 	FROM todos
 	WHERE user_id = $1
+	AND ($2::boolean is NULL OR completed = $2)
 	ORDER BY created_at DESC
+	LIMIT $3 OFFSET $4
 	`
 
-	rows, err := r.db.Query(ctx, query, userID)
+	rows, err := r.db.Query(
+		ctx,
+		query,
+		userID,
+		queryParams.Completed,
+		queryParams.Limit,
+		offset,
+	)
 
 	if err != nil {
 		return nil, err
