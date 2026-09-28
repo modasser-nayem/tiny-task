@@ -130,12 +130,21 @@ func (h *Handler) GetByID(c *gin.Context) {
 	}
 
 	todo, err := h.service.GetByID(c.Request.Context(), userID, id)
-
 	if err != nil {
+		if errors.Is(err, ErrTodoNotFound) {
+			c.JSON(
+				http.StatusNotFound,
+				gin.H{
+					"error": "todo not found",
+				},
+			)
+			return
+		}
+
 		c.JSON(
-			http.StatusBadRequest,
-			gin.H {
-				"error": "todo not found",
+			http.StatusInternalServerError,
+			gin.H{
+				"error": "failed to fetch todo",
 			},
 		)
 		return
@@ -288,7 +297,7 @@ func parseListQuery(c *gin.Context) (ListTodoQuery, error) {
 	if value := c.Query("page"); value != "" {
 		parsed, err := strconv.Atoi(value)
 
-		if err != nil || parsed < 0 {
+		if err != nil || parsed <= 0 {
 			return ListTodoQuery{}, errors.New("page must be a positive integer")
 		}
 

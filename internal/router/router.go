@@ -11,9 +11,11 @@ import (
 	"github.com/modasser-nayem/tiny-task/internal/modules/user"
 )
 
-func Setup(cfg config.Config, authHandler *auth.Handler, userHandler *user.Handler, todoHandler *todo.Handler, tokenManager *auth.TokenManager) *gin.Engine {
-  
-	r := gin.Default()
+func Setup(cfg *config.Config, authHandler *auth.Handler, userHandler *user.Handler, todoHandler *todo.Handler, tokenManager *auth.TokenManager) *gin.Engine {
+	r := gin.New()
+	r.Use(gin.Recovery())
+	r.Use(gin.Logger())
+	_ = r.SetTrustedProxies(nil)
 
 	r.Use(middleware.ErrorHandler())
 

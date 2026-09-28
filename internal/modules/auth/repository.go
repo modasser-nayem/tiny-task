@@ -9,8 +9,11 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-var ErrUserNotFound = errors.New("user not found")
-var ErrEmailAlreadyExists = errors.New("email already exists")
+var (
+	ErrUserNotFound         = errors.New("user not found")
+	ErrEmailAlreadyExists   = errors.New("email already exists")
+	ErrInvalidCredentials   = errors.New("invalid email or password")
+)
 
 type Repository interface {
 	FindByEmail(ctx context.Context, email string) (*User, error)

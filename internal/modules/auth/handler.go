@@ -21,7 +21,7 @@ func (h *Handler) Register(c *gin.Context) {
 	var req RegisterRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H {
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "invalid request body",
 		})
 		return
@@ -30,12 +30,12 @@ func (h *Handler) Register(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	response, err := h.service.Register(ctx, req)
-
 	if err != nil {
 		if errors.Is(err, ErrEmailAlreadyExists) {
-			c.JSON(http.StatusConflict, gin.H {
+			c.JSON(http.StatusConflict, gin.H{
 				"error": "email already exists",
 			})
+			return
 		}
 
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -47,27 +47,30 @@ func (h *Handler) Register(c *gin.Context) {
 	c.JSON(http.StatusCreated, response)
 }
 
-
-func(h *Handler) Login(c *gin.Context) {
+func (h *Handler) Login(c *gin.Context) {
 	var req LoginRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "invalid request body",
 		})
-
 		return
 	}
 
 	ctx := c.Request.Context()
 
 	response, err := h.service.Login(ctx, &req)
-
 	if err != nil {
+		if errors.Is(err, ErrInvalidCredentials) {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": "invalid email or password",
+			})
+			return
+		}
+
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": err.Error(),
 		})
-
 		return
 	}
 

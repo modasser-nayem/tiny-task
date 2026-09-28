@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"strings"
-
-	apperrors "github.com/modasser-nayem/tiny-task/internal/errors"
 )
 
 type Service struct {
@@ -17,15 +15,16 @@ func NewService(repository Repository) *Service {
 }
 
 func (s *Service) Create(ctx context.Context, userID int64, req CreateTodoRequest) (*TodoResponse, error) {
-	title := strings.TrimSpace(req.Title)
 
-	if title == "" {
-		return nil, errors.New("title is required")
+if err := validateCreateTodo(req); err != nil {
+		return nil, err
 	}
+
+	req.Title = strings.TrimSpace(req.Title)
 
 	todo := &Todo{
 		UserID: userID,
-		Title: title,
+		Title: req.Title,
 		Description: req.Description,
 	}
 
@@ -56,21 +55,9 @@ func (s *Service) GetAll(ctx context.Context, userID int64, query ListTodoQuery 
 
 func (s *Service) GetByID(ctx context.Context, userID int64, id int64) (*TodoResponse, error) {
 	todo, err := s.repository.FindByID(ctx, id, userID)
-
 	if err != nil {
-		if errors.Is(err, ErrTodoNotFound) {
-			return nil, apperrors.NotFound(
-				"TODO_NOT_FOUND",
-				"todo not found",
-			)
-		}
-
-		return nil, apperrors.Internal(
-			"TODO_FETCH_FAILED",
-			"failed to fetch todo",
-		)
+		return nil, err
 	}
-
 
 	return toResponse(todo), nil
 }

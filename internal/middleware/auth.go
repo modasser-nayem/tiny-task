@@ -1,10 +1,10 @@
 package middleware
 
 import (
-	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	apperrors "github.com/modasser-nayem/tiny-task/internal/errors"
 	"github.com/modasser-nayem/tiny-task/internal/modules/auth"
 )
 
@@ -15,24 +15,24 @@ func Auth(tokenManager *auth.TokenManager) gin.HandlerFunc {
 		authHeader := c.GetHeader("Authorization")
 
 		if authHeader == "" {
-			c.AbortWithStatusJSON(
-				http.StatusUnauthorized,
-				gin.H{
-					"error": "authorization header is required",
-				},
-			)
+			c.Error(apperrors.Unauthorized(
+				"AUTHORIZATION_HEADER_REQUIRED",
+				"authorization header is required",
+			))
+
+			c.Abort()
 			return
 		}
 
 		parts := strings.SplitN(authHeader, " ", 2)
 
 		if len(parts) != 2 || parts[0] != "Bearer" {
-			c.AbortWithStatusJSON(
-				http.StatusUnauthorized,
-				gin.H {
-					"error": "invalid authorization header",
-				},
-			)
+			c.Error(apperrors.Unauthorized(
+				"INVALID_AUTHORIZATION_HEADER",
+				"invalid authorization header",
+			))
+
+			c.Abort()
 			return
 		}
 
@@ -41,12 +41,12 @@ func Auth(tokenManager *auth.TokenManager) gin.HandlerFunc {
 		claims, err := tokenManager.Parse(tokenString)
 
 		if err != nil {
-			c.AbortWithStatusJSON(
-				http.StatusUnauthorized,
-				gin.H {
-					"error": "invalid or expired token",
-				},
-			)
+			c.Error(apperrors.Unauthorized(
+				"INVALID_TOKEN",
+				"invalid or expired token",
+			))
+
+			c.Abort()
 			return
 		}
 

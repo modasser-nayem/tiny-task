@@ -26,6 +26,7 @@ type Repository interface {
 type PostgresRepository struct {
 	db *pgxpool.Pool
 }
+var _ Repository = (*PostgresRepository)(nil)
 
 func NewPostgresRepository(db *pgxpool.Pool) *PostgresRepository {
 	return &PostgresRepository{db: db}

@@ -26,9 +26,9 @@ func (tm *TokenManager) Generate(userID int64) (string, error) {
 	claims := Claims{
 		UserID: userID,
 		RegisteredClaims: jwt.RegisteredClaims{
-			Subject: strconv.FormatInt(userID, 10),
+			Subject:   strconv.FormatInt(userID, 10),
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
-			IssuedAt: jwt.NewNumericDate(time.Now()),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
 	}
 
@@ -40,23 +40,22 @@ func (tm *TokenManager) Generate(userID int64) (string, error) {
 	return token.SignedString([]byte(tm.secret))
 }
 
-func(tm *TokenManager) Parse(tokenString string) (*Claims, error) {
+func (tm *TokenManager) Parse(tokenString string) (*Claims, error) {
 	token, err := jwt.ParseWithClaims(
 		tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
-		if token.Method != jwt.SigningMethodHS256 {
-			return nil, jwt.ErrTokenSignatureInvalid
-		}
+			if token.Method != jwt.SigningMethodHS256 {
+				return nil, jwt.ErrTokenSignatureInvalid
+			}
 
-		return []byte(tm.secret), nil
-	})
+			return []byte(tm.secret), nil
+		})
 
 	if err != nil {
 		return nil, err
 	}
 
 	claims, ok := token.Claims.(*Claims)
-
-	if !ok {
+	if !ok || !token.Valid {
 		return nil, jwt.ErrTokenInvalidClaims
 	}
 

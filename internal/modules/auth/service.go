@@ -3,19 +3,20 @@ package auth
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 
 	"golang.org/x/crypto/bcrypt"
 )
 
 type Service struct {
-	repository Repository
+	repository   Repository
 	tokenManager *TokenManager
 }
 
 func NewService(repository Repository, tokenManager *TokenManager) *Service {
 	return &Service{
-		repository: repository,
+		repository:   repository,
 		tokenManager: tokenManager,
 	}
 }
@@ -23,6 +24,7 @@ func NewService(repository Repository, tokenManager *TokenManager) *Service {
 func (s *Service) Register(ctx context.Context, req RegisterRequest) (*RegisterResponse, error) {
 	name := strings.TrimSpace(req.Name)
 	email := strings.ToLower(strings.TrimSpace(req.Email))
+	password := req.Password
 
 	if name == "" {
 		return nil, errors.New("name is required")
@@ -32,78 +34,73 @@ func (s *Service) Register(ctx context.Context, req RegisterRequest) (*RegisterR
 		return nil, errors.New("email is required")
 	}
 
-	if req.Password == "" {
-		return nil, errors.New("password is required")
+	if len(password) < 8 {
+		return nil, errors.New("password must be at least 8 characters")
+	}
+
+	if len(password) > 72 {
+		return nil, errors.New("password cannot exceed 72 bytes")
 	}
 
 	existingUser, err := s.repository.FindByEmail(ctx, email)
-
-	if err != nil && existingUser != nil {
-		return nil, err
+	if err == nil && existingUser != nil {
+		return nil, ErrEmailAlreadyExists
+	}
+	if err != nil && !errors.Is(err, ErrUserNotFound) {
+		return nil, fmt.Errorf("failed to check existing user: %w", err)
 	}
 
-	if !errors.Is(err, ErrUserNotFound) && existingUser != nil {
-		return nil, err
-	}
-
-	passwordHash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
-
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, errors.New("failed to hash password")
 	}
 
 	user := &User{
-		Name: name,
-		Email: email,
+		Name:         name,
+		Email:        email,
 		PasswordHash: string(passwordHash),
 	}
 
 	createdUser, err := s.repository.Create(ctx, user)
-
 	if err != nil {
 		return nil, err
 	}
 
 	return &RegisterResponse{
-		ID: createdUser.ID,
-		Name: createdUser.Name,
+		ID:    createdUser.ID,
+		Name:  createdUser.Name,
 		Email: createdUser.Email,
 	}, nil
-
 }
 
 func (s *Service) Login(ctx context.Context, req *LoginRequest) (*LoginResponse, error) {
-	email := strings.ToLower(strings.TrimSpace(req.Email))
+	if req == nil {
+		return nil, errors.New("request body is required")
+	}
 
+	email := strings.ToLower(strings.TrimSpace(req.Email))
 	if email == "" || req.Password == "" {
 		return nil, errors.New("email and password are required")
 	}
 
 	user, err := s.repository.FindByEmail(ctx, email)
-
 	if err != nil {
 		if errors.Is(err, ErrUserNotFound) {
-			return nil, errors.New("invalid credentials")
+			return nil, ErrInvalidCredentials
 		}
-
 		return nil, err
 	}
 
-	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password))
-
-
-	if err != nil {
-		return nil, errors.New("invalid email or password")
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
+		return nil, ErrInvalidCredentials
 	}
 
 	accessToken, err := s.tokenManager.Generate(user.ID)
-
 	if err != nil {
 		return nil, errors.New("failed to generate access token")
 	}
 
-	return &LoginResponse {
+	return &LoginResponse{
 		AccessToken: accessToken,
 	}, nil
 }
-
